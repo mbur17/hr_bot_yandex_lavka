@@ -1,0 +1,4 @@
+httpx
+python-telegram-bot
+pydantic-settings
+check-swear

@@ -1,0 +1,259 @@
+{% extends "sqladmin/layout.html" %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">{{ model_view.name_plural }}</h3>
+        </div>
+
+        {% if request.query_params.get('imported') %}
+          <div class="alert alert-success mt-3" role="alert">
+            Загружено пользователей: {{ request.query_params.get('imported') }}
+          </div>
+        {% endif %}
+
+        <div class="card-body">
+          {% if model_view.can_export %}
+          {% if model_view.export_types | length > 1 %}
+          <div class="dropdown">
+            <a href="#" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">Экспорт</a>
+            <ul class="dropdown-menu">
+              {% for export_type in model_view.export_types %}
+              <li><a class="dropdown-item" href="{{ url_for('admin:export', identity=model_view.identity, export_type=export_type) }}">{{ export_type | upper }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% elif model_view.export_types | length == 1 %}
+          <a href="{{ url_for('admin:export', identity=model_view.identity, export_type=model_view.export_types[0]) }}" class="btn btn-secondary">Экспорт</a>
+          {% endif %}
+          {% endif %}
+          
+          {% if model_view.can_create %}
+          <a href="{{ url_for('admin:create', identity=model_view.identity) }}" class="btn btn-primary">+ Создать {{ model_view.name }}</a>
+          {% endif %}
+
+          {% if model_view.get_filters() %}
+          <div class="mt-1.1 ms-0.5 d-inline">
+            <div class="dropdown d-inline">
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                Фильтр: {{ model_view.get_filters()[0].title }}
+              </button>
+              <ul class="dropdown-menu">
+                <li>
+                  <a href="{{ request.url.remove_query_params(model_view.get_filters()[0].parameter_name) }}" class="dropdown-item">Все</a>
+                </li>
+                {% for lookup in model_view.get_filters()[0].lookups(request, model_view.model, model_view._run_arbitrary_query) %}
+                <li>
+                  <a href="{{ request.url.include_query_params(**{model_view.get_filters()[0].parameter_name: lookup[0]}) }}" class="dropdown-item">
+                    {{ lookup[1] }}
+                  </a>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="card-body border-bottom">
+          <div class="dropdown">
+            <button {% if not model_view.can_delete and not model_view._custom_actions_in_list %} disabled {% endif %} class="btn btn-light dropdown-toggle" data-toggle="dropdown">Действия</button>
+            {% if model_view.can_delete or model_view._custom_actions_in_list %}
+            <div class="dropdown-menu">
+              {% if model_view.can_delete %}
+              <a class="dropdown-item" id="action-delete" href="#" data-name="{{ model_view.name }}" data-url="{{ url_for('admin:delete', identity=model_view.identity) }}" data-bs-toggle="modal" data-bs-target="#modal-delete">Удалить выделенные элементы</a>
+              {% endif %}
+              {% for custom_action, label in model_view._custom_actions_in_list.items() %}
+              {% if custom_action in model_view._custom_actions_confirmation %}
+              <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modal-confirmation-{{ custom_action }}">{{ label }}</a>
+              {% else %}
+              <a class="dropdown-item" href="{{ model_view._url_for_action(request, custom_action) }}">{{ label }}</a>
+              {% endif %}
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+          {% if model_view.column_searchable_list %}
+          <div class="input-group">
+            <input id="search-input" type="text" class="form-control" placeholder="Search: {{ model_view.search_placeholder() }}" value="{{ request.query_params.get('search', '') }}">
+            <button id="search-button" class="btn btn-outline-secondary">Поиск</button>
+            <button id="search-reset" class="btn btn-outline-secondary" {% if not request.query_params.get('search') %}disabled{% endif %}><i class="fa-solid fa-times"></i></button>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th><input class="form-check-input" type="checkbox" id="select-all"></th>
+                <th>Действия</th>
+                {% for name in model_view._list_prop_names %}
+                {% set label = model_view._column_labels.get(name, name) %}
+                <th>
+                  {% if name in model_view._sort_fields %}
+                  {% if request.query_params.get("sortBy") == name and request.query_params.get("sort") == "asc" %}
+                  <a href="{{ request.url.include_query_params(sort='desc') }}"><i class="fa-solid fa-arrow-up"></i> {{ label }}</a>
+                  {% elif request.query_params.get("sortBy") == name and request.query_params.get("sort") == "desc" %}
+                  <a href="{{ request.url.include_query_params(sort='asc') }}"><i class="fa-solid fa-arrow-down"></i> {{ label }}</a>
+                  {% else %}
+                  <a href="{{ request.url.include_query_params(sortBy=name, sort='asc') }}">{{ label }}</a>
+                  {% endif %}
+                  {% else %}
+                  {{ label }}
+                  {% endif %}
+                </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            {% set role_labels = {'ADMIN': 'Администратор', 'MANAGER': 'Менеджер', 'USER': 'Пользователь'} %}
+            {% set layout_type_labels = {'text': 'Текст', 'text_image': 'Текс с картинкой', 'gallery': 'Галерея'} %}
+            {% set status_labels = {'NEW': 'Новое', 'ANSWERED': 'Отвечено'} %}
+            <tbody>
+              {% for row in pagination.rows %}
+              <tr>
+                <td>
+                  <input type="hidden" value="{{ get_object_identifier(row) }}">
+                  <input class="form-check-input select-box" type="checkbox">
+                </td>
+
+                <td class="text-start">
+                  <div class="d-none d-md-inline">
+                    {% if model_view.can_view_details %}
+                    <a href="{{ model_view._build_url_for('admin:details', request, row) }}" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-eye"></i></a>
+                    {% endif %}
+                    {% if model_view.can_edit %}
+                    <a href="{{ model_view._build_url_for('admin:edit', request, row) }}" class="btn btn-sm btn-outline-warning"><i class="fa-solid fa-pen-to-square"></i></a>
+                    {% endif %}
+                    {% if model_view.can_delete %}
+                    <a href="#" data-name="{{ model_view.name }}" data-pk="{{ get_object_identifier(row) }}" data-url="{{ model_view._url_for_delete(request, row) }}" data-bs-toggle="modal" data-bs-target="#modal-delete" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></a>
+                    {% endif %}
+                  </div>
+                  
+                  <div class="dropdown d-md-none">
+
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                            type="button" 
+                            data-bs-toggle="dropdown"
+                            data-bs-boundary="viewport">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                    
+                    <ul class="dropdown-menu">
+                      {% if model_view.can_view_details %}
+                      <li><a class="dropdown-item" href="{{ model_view._build_url_for('admin:details', request, row) }}"><i class="fa-solid fa-eye me-2"></i>Просмотр</a></li>
+                      {% endif %}
+                      {% if model_view.can_edit %}
+                      <li><a class="dropdown-item" href="{{ model_view._build_url_for('admin:edit', request, row) }}"><i class="fa-solid fa-pen-to-square me-2"></i>Редактировать</a></li>
+                      {% endif %}
+                      {% if model_view.can_delete %}
+                      <li><a class="dropdown-item text-danger" href="#" data-name="{{ model_view.name }}" data-pk="{{ get_object_identifier(row) }}" data-url="{{ model_view._url_for_delete(request, row) }}" data-bs-toggle="modal" data-bs-target="#modal-delete"><i class="fa-solid fa-trash me-2"></i>Удалить</a></li>
+                      {% endif %}
+                    </ul>
+                  </div>
+                </td>
+
+                {% for name in model_view._list_prop_names %}
+                {% set value, formatted_value = model_view.get_list_value(row, name) %}
+                {% if name in model_view._relation_names %}
+                {% if is_list( value ) %}
+                <td>
+                  {% for elem, formatted_elem in zip(value, formatted_value) %}
+                    {% if model_view.show_compact_lists %}
+                      <a href="{{ model_view._build_url_for('admin:details', request, elem) }}">({{ formatted_elem }})</a>
+                    {% else %}
+                      <a href="{{ model_view._build_url_for('admin:details', request, elem) }}">{{ formatted_elem }}</a><br/>
+                    {% endif %}
+                  {% endfor %}
+                </td>
+                {% else %}
+                <td><a href="{{ model_view._url_for_details_with_prop(request, row, name) }}">{{ formatted_value }}</a></td>
+                {% endif %}
+                {% else %}
+                <td>
+                {% if name == "role" %}
+                  {{ role_labels.get(value, value) }}
+                {% elif name == "layout_type" %}
+                  {{ layout_type_labels.get(value, value) }}
+                {% elif name == "status" %}
+                  {{ status_labels.get(value, value) }}
+                {% elif name == 'image_preview' %}
+                  <img src="{{ value }}" style="max-width: 150px; max-height: 150px; object-fit: contain;" />
+                {% else %}
+                  {{ formatted_value }}
+                </td>
+                {% endif %}
+                {% endif %}
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+<div class="card-footer d-flex justify-content-between align-items-center gap-2">
+  <small class="m-0 text-muted">{{ ((pagination.page - 1) * pagination.page_size) + 1 }}-{{ min(pagination.page * pagination.page_size, pagination.count) }} из {{ pagination.count }}</small>
+  
+  <ul class="pagination m-0 ms-auto">
+    <li class="page-item {% if not pagination.has_previous %}disabled{% endif %}">
+      {% if pagination.has_previous %}
+      <a class="page-link" href="{{ pagination.previous_page.url }}">
+      {% else %}
+      <a class="page-link" href="#">
+      {% endif %}
+        <i class="fa-solid fa-chevron-left"></i>
+        пред.
+      </a>
+    </li>
+    {% for page_control in pagination.page_controls %}
+    <li class="page-item {% if page_control.number == pagination.page %}active{% endif %}">
+      <a class="page-link" href="{{ page_control.url }}">{{ page_control.number }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+      {% if pagination.has_next %}
+      <a class="page-link" href="{{ pagination.next_page.url }}">
+      {% else %}
+      <a class="page-link" href="#">
+      {% endif %}
+        след.
+        <i class="fa-solid fa-chevron-right"></i>
+      </a>
+    </li>
+  </ul>
+  
+  <div class="dropdown text-muted">
+    Показать
+    <a href="#" class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      {{ request.query_params.get("pageSize") or model_view.page_size }} / Страница
+    </a>
+    <div class="dropdown-menu">
+      {% for page_size_option in model_view.page_size_options %}
+      <a class="dropdown-item" href="{{ request.url.include_query_params(pageSize=page_size_option, page=pagination.resize(page_size_option).page) }}">
+        {{ page_size_option }} / Страница
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+      </div>
+    </div>
+  </div>
+
+  {% if model_view.can_delete %}
+  {% include 'sqladmin/modals/delete.html' %}
+  {% include 'sqladmin/modals/delete_result_info.html' %}
+  {% endif %}
+
+  {% for custom_action in model_view._custom_actions_in_list %}
+  {% if custom_action in model_view._custom_actions_confirmation %}
+  {% with confirmation_message = model_view._custom_actions_confirmation[custom_action], custom_action=custom_action, url=model_view._url_for_action(request, custom_action) %}
+  {% include 'sqladmin/modals/list_action_confirmation.html' %}
+  {% endwith %}
+  {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "sqladmin/layout.html" %}
+{% block body %}
+<div class="page page-center">
+  <div class="container-tight py-4">
+    <div class="text-center mb-4">
+      <img src="{{ admin.logo_url or '/static/logo.svg' }}" 
+           alt="{{ admin.title }}" 
+           class="login-logo" 
+           style="max-width: 120px; height: auto;">
+    </div>
+    <div class="empty">
+      <div class="empty-header">{{ status_code }}</div>
+      <p class="empty-title">
+        {% if status_code == 404 %}
+          Страница не найдена
+        {% elif status_code == 403 %}
+          Доступ запрещен
+        {% elif status_code == 500 %}
+          Внутренняя ошибка сервера
+        {% elif status_code == 401 %}
+          Необходима авторизация
+        {% elif status_code == 400 %}
+          Неверный запрос
+        {% else %}
+          {{ message }}
+        {% endif %}
+      </p>
+      <div class="text-center mt-4">
+        <button onclick="history.back()" class="btn btn-secondary me-2">
+          Назад
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

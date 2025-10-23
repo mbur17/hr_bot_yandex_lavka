@@ -1,0 +1,81 @@
+{% extends "sqladmin/layout.html" %} 
+{% block content %}  
+<div class="container-fluid">   
+  <div class="row">     
+    <div class="col-12">       
+      <div class="card">         
+        <div class="card-header">           
+          <h3 class="card-title">Карта бота</h3>
+        </div>         
+        <div class="card-body">                      
+          {% macro render_node(node, level=0) %}             
+            {% if node.children %}
+              <details {% if level < 2 %}open{% endif %}>
+                <summary>
+                  <span class="folder-icon">💬</span>
+                  <span class="folder-icon-open">💬</span>
+                  {{ node.title }}
+                </summary>
+                <div style="margin-left: 20px;">
+                  {% for child in node.children %}
+                    {{ render_node(child, level + 1) }}
+                  {% endfor %}
+                </div>
+              </details>
+            {% else %}
+              <div style="margin: 5px 0;">💬 {{ node.title }}</div>
+            {% endif %}
+          {% endmacro %}
+          
+          {% if tree %}             
+            <div style="font-family: monospace; line-height: 1.6;">
+              {% for root in tree %}               
+                {{ render_node(root) }}
+              {% endfor %}
+            </div>
+          {% else %}             
+            <p class="text-muted">🚫 Узлы не найдены</p>           
+          {% endif %}                    
+        </div>       
+      </div>     
+    </div>   
+  </div> 
+</div>
+
+<style>
+details {
+  margin: 3px 0;
+}
+
+summary {
+  cursor: pointer;
+  padding: 2px 0;
+  user-select: none;
+}
+
+summary:hover {
+  background-color: #f8f9fa;
+}
+
+details[open] summary {
+  margin-bottom: 5px;
+}
+
+.folder-icon {
+  display: inline;
+}
+
+.folder-icon-open {
+  display: none;
+}
+
+details[open] .folder-icon {
+  display: none;
+}
+
+details[open] .folder-icon-open {
+  display: inline;
+}
+</style>
+
+{% endblock %}

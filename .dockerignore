@@ -1,0 +1,5 @@
+venv
+.git 
+ruff
+pre-commit
+requirements_style.txt

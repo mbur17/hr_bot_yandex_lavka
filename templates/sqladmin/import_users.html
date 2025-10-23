@@ -1,0 +1,36 @@
+{% extends "sqladmin/layout.html" %}
+
+{% block content %}
+<div class="col-md-8 mx-auto">
+  <div class="card my-5 shadow">
+    <div class="card-header bg-primary text-white">
+      <h3 class="card-title">Импорт пользователей из Excel</h3>
+    </div>
+    <div class="card-body">
+      <form method="post" action="/api/v1/import-users/upload" enctype="multipart/form-data" class="row g-3">
+        <div class="mb-3">
+          <label for="file" class="form-label">Выберите файл (.xls, .xlsx):</label>
+          <input class="form-control" type="file" name="file" id="file" accept=".xls,.xlsx" required>
+        </div>
+        <div class="mb-3">
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-upload"></i> Загрузить
+          </button>
+          <a href="/static/download/user_import_template.xlsx" class="btn btn-outline-secondary" download>
+            <i class="fa-solid fa-file-arrow-down"></i> Скачать шаблон
+          </a>
+        </div>
+        <div class="alert alert-info mt-3" role="alert">
+          <b>Шаблон файла для импорта пользователей можно скачать нажав "Скачать шаблон". </b>
+          <br>
+          <a><b>Роль пользователя</b> должна быть: "Администратор", "Менеджер" или "Пользователь".</a>
+          <br>
+          <a><b>Пароль</b> для ролей "Администратор", "Менеджер" обязателен (минимальная длина 4 символа). Для роли "Пользователь" пароль указывать не нужно.</a>
+          <br>
+          <a>Если в базе уже существует пользователь с указанным login или telegram_id, то он не будет добавлен.</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
