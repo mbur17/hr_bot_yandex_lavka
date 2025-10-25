@@ -289,22 +289,19 @@ DOCKER_REPO=docker_repo_name
 ---
 
 ## Авторы
-**Команда сопровождения:**
-- Наставники Мастерской:
+**Наставник:**
   - [Роман Александров](https://github.com/teamofroman)
-  - [Станислав Баринов](https://github.com/hixwizard)
-- Проджект-менеджер: Алёна
 
 **Тимлид проекта:**
 - [Максим Буряковский](https://github.com/mbur17)
 
 **Команда Админки:**
-- Тимлид команды: [Иванова Анна](https://github.com/IvalexAnna)
+- [Иванова Анна](https://github.com/IvalexAnna)
 - [Кардава Дмитрий](https://github.com/DmitriyKardava)
 - [Столповских Максим](https://github.com/maxstolpovskikh)
 - [Серебренников Александр](https://github.com/serebrennikovalexander)
 
 **Команда Бота:**
-- Тимлид команды: [Похлебкина Елизавета](https://github.com/foxxybit)
+- [Похлебкина Елизавета](https://github.com/foxxybit)
 - [Черепова Кунел](https://github.com/kunelcherepova)
 - [Черепов Денис](https://github.com/qwetqwer111)
